@@ -1,0 +1,8 @@
+MLP Classifier:
+python3 -m homework.train --model_name mlp --num_epoch 50 --lr .001
+
+Deep Network: 
+python3 -m homework.train --model_name mlp_deep --lr .01 --algo sgd --batch_size 256 --momentum .6
+
+Deep Residual Network: 
+python3 -m homework.train --model_name mlp_deep_residual --num_epoch 15 --lr .0001

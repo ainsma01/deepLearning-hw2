@@ -17,6 +17,9 @@ def train(
     lr: float = 1e-3,
     batch_size: int = 128,
     seed: int = 2024,
+    algo: str = "sgd",
+    momentum: float = 0.9,
+    weight_decay: float = 0.0001,
     **kwargs,
 ):
     if torch.cuda.is_available():
@@ -46,6 +49,9 @@ def train(
     # create loss function and optimizer
     loss_func = ClassificationLoss()
     # optimizer = ...
+    optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    if algo == "sgd":
+        optim = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
     global_step = 0
     metrics = {"train_acc": [], "val_acc": []}
@@ -62,7 +68,18 @@ def train(
             img, label = img.to(device), label.to(device)
 
             # TODO: implement training step
-            raise NotImplementedError("Training step not implemented")
+            pred = model(img)
+
+            loss = loss_func(pred, label)
+
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+
+           # compute training accuracy
+            pred_labels = torch.argmax(pred, dim=1)
+            train_acc = (pred_labels == label).sum() / len(label)
+            metrics["train_acc"].append(train_acc)
 
             global_step += 1
 
@@ -74,21 +91,21 @@ def train(
                 img, label = img.to(device), label.to(device)
 
                 # TODO: compute validation accuracy
-                raise NotImplementedError("Validation accuracy not implemented")
+                pred = model(img)
+                pred_labels = torch.argmax(pred, dim=1)
+                val_acc = (pred_labels == label).sum() / len(label)
+                metrics["val_acc"].append(val_acc)
 
         # log average train and val accuracy to tensorboard
         epoch_train_acc = torch.as_tensor(metrics["train_acc"]).mean()
         epoch_val_acc = torch.as_tensor(metrics["val_acc"]).mean()
 
-        raise NotImplementedError("Logging not implemented")
-
         # print on first, last, every 10th epoch
-        if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
-            print(
-                f"Epoch {epoch + 1:2d} / {num_epoch:2d}: "
-                f"train_acc={epoch_train_acc:.4f} "
-                f"val_acc={epoch_val_acc:.4f}"
-            )
+        print(
+            f"Epoch {epoch + 1:2d} / {num_epoch:2d}: "
+            f"train_acc={epoch_train_acc:.4f} "
+            f"val_acc={epoch_val_acc:.4f}"
+        )
 
     # save and overwrite the model in the root directory for grading
     save_model(model)
@@ -106,7 +123,10 @@ if __name__ == "__main__":
     parser.add_argument("--num_epoch", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=2024)
-
+    parser.add_argument("--algo", type=str, default="adam")
+    parser.add_argument("--momentum", type=float, default=0.9)
+    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--weight_decay", type=float, default=0.0001)
     # optional: additional model hyperparamters
     # parser.add_argument("--num_layers", type=int, default=3)
 
